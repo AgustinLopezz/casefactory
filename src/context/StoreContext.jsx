@@ -45,18 +45,27 @@ export const StoreProvider = ({ children }) => {
 
   const addProduct = async (product) => {
     try {
+      // Generamos un UUID en el frontend para asegurar que el producto tenga ID
+      const newProduct = {
+        ...product,
+        id: self.crypto.randomUUID(),
+        price: parseFloat(product.price),
+        stock: parseInt(product.stock)
+      };
+      
       const { data, error } = await supabase
         .from('products')
-        .insert([product])
+        .insert([newProduct])
         .select();
 
       if (error) throw error;
 
       if (data) {
         setProducts([data[0], ...products]);
+        alert('Producto agregado exitosamente');
       }
     } catch (error) {
-      console.error('Error agregando producto:', error.message);
+      console.error('Error agregando producto:', error);
       alert('Error al agregar producto: ' + error.message);
     }
   };
