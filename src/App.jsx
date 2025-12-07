@@ -12,6 +12,24 @@ const InventoryView = () => {
   const { products, addProduct, editProduct, deleteProduct, loading } = useStore();
   const [productForm, setProductForm] = useState({ id: null, code: '', name: '', model: '', category: 'Fundas', price: '', stock: '' });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  // Estados para búsqueda y filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [showLowStock, setShowLowStock] = useState(false);
+
+  // Lógica de filtrado
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = (
+      (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
+    const matchesStock = showLowStock ? parseInt(product.stock) < 5 : true;
+
+    return matchesSearch && matchesCategory && matchesStock;
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,14 +57,55 @@ const InventoryView = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Inventario</h2>
         <button 
           onClick={handleNew}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full md:w-auto justify-center"
         >
           <Plus size={20} /> Nuevo Producto
         </button>
+      </div>
+
+      {/* Barra de Herramientas de Búsqueda */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <input 
+            type="text" 
+            placeholder="Buscar por nombre, modelo o código..." 
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
+          <select 
+            className="border p-2 rounded-lg bg-gray-50 min-w-[140px]"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="Todos">Todas las Categorías</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          <button 
+            onClick={() => setShowLowStock(!showLowStock)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition whitespace-nowrap ${
+              showLowStock 
+                ? 'bg-red-50 border-red-200 text-red-600 font-medium' 
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full ${showLowStock ? 'bg-red-500' : 'bg-gray-300'}`} />
+            Poco Stock
+          </button>
+        </div>
       </div>
 
       {isFormOpen && (
@@ -150,12 +209,16 @@ const InventoryView = () => {
               <tr>
                 <td colSpan="6" className="p-8 text-center text-gray-500">Cargando inventario...</td>
               </tr>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan="6" className="p-8 text-center text-gray-400">No hay productos registrados</td>
+                <td colSpan="6" className="p-8 text-center text-gray-400">
+                  {searchTerm || showLowStock || selectedCategory !== 'Todos' 
+                    ? 'No se encontraron productos con estos filtros' 
+                    : 'No hay productos registrados'}
+                </td>
               </tr>
             ) : (
-              products.map(p => (
+              filteredProducts.map(p => (
                 <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="p-4 text-sm font-mono text-gray-500">{p.code || '-'}</td>
                   <td className="p-4">
