@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import Swal from 'sweetalert2';
 
 const StoreContext = createContext();
 
@@ -62,11 +63,21 @@ export const StoreProvider = ({ children }) => {
 
       if (data) {
         setProducts([data[0], ...products]);
-        alert('Producto agregado exitosamente');
+        Swal.fire({
+          title: '¡Producto Agregado!',
+          text: 'El producto se ha guardado correctamente.',
+          icon: 'success',
+          confirmButtonText: 'Aceptar'
+        });
       }
     } catch (error) {
       console.error('Error agregando producto:', error);
-      alert('Error al agregar producto: ' + error.message);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo agregar el producto: ' + error.message,
+        icon: 'error',
+        confirmButtonText: 'Cerrar'
+      });
     }
   };
 
@@ -80,14 +91,33 @@ export const StoreProvider = ({ children }) => {
       if (error) throw error;
 
       setProducts(products.map(p => (p.id === id ? { ...p, ...updatedProduct } : p)));
+      
+      Swal.fire({
+        title: '¡Actualizado!',
+        text: 'El producto ha sido actualizado correctamente.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error actualizando producto:', error.message);
-      alert('Error al actualizar: ' + error.message);
+      Swal.fire('Error', 'No se pudo actualizar: ' + error.message, 'error');
     }
   };
 
   const deleteProduct = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       const { error } = await supabase
@@ -98,9 +128,14 @@ export const StoreProvider = ({ children }) => {
       if (error) throw error;
 
       setProducts(products.filter(p => p.id !== id));
+      Swal.fire(
+        '¡Eliminado!',
+        'El producto ha sido eliminado.',
+        'success'
+      );
     } catch (error) {
       console.error('Error eliminando producto:', error.message);
-      alert('Error al eliminar: ' + error.message);
+      Swal.fire('Error', 'No se pudo eliminar: ' + error.message, 'error');
     }
   };
 
@@ -113,7 +148,7 @@ export const StoreProvider = ({ children }) => {
       // 1. Calcular nuevo stock
       const newStock = parseInt(product.stock) - parseInt(saleItem.quantity);
       if (newStock < 0) {
-        alert('No hay suficiente stock');
+        Swal.fire('Stock Insuficiente', 'No hay suficientes unidades para esta venta.', 'warning');
         return;
       }
 
@@ -146,10 +181,18 @@ export const StoreProvider = ({ children }) => {
       setProducts(products.map(p => 
         p.id === saleItem.productId ? { ...p, stock: newStock } : p
       ));
+      
+      Swal.fire({
+        position: 'top-end',
+        icon: 'success',
+        title: 'Venta registrada',
+        showConfirmButton: false,
+        timer: 1500
+      });
 
     } catch (error) {
       console.error('Error procesando venta:', error.message);
-      alert('Error al procesar la venta: ' + error.message);
+      Swal.fire('Error', 'Error al procesar la venta: ' + error.message, 'error');
     }
   };
 
