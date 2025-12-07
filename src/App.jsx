@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { StoreProvider, useStore } from './context/StoreContext';
-import { Package, ShoppingCart, Plus, History, Trash2, DollarSign, Pencil, X } from 'lucide-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './components/Login';
+import { Package, ShoppingCart, Plus, History, Trash2, DollarSign, Pencil, X, LogOut } from 'lucide-react';
 
 const CATEGORIES = ['Fundas', 'Cargadores', 'Auriculares', 'Cables', 'Otros'];
 
@@ -360,44 +364,83 @@ const SalesView = () => {
   );
 };
 
-function App() {
-  const [activeTab, setActiveTab] = useState('inventory');
+const Dashboard = () => {
+  const location = useLocation();
+  const { signOut, user } = useAuth();
+  
+  // Determinar vista activa basada en la ruta
+  const isInventory = location.pathname === '/inventory' || location.pathname === '/';
 
   return (
-    <StoreProvider>
-      <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
-        {/* Navbar */}
-        <nav className="bg-white shadow-sm sticky top-0 z-10">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="bg-black text-white p-2 rounded-lg">
-                <Package size={24} />
-              </div>
-              <h1 className="text-xl font-bold tracking-tight">CaseFactory</h1>
+    <div className="min-h-screen bg-gray-100 font-sans text-gray-900">
+      {/* Navbar */}
+      <nav className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-black text-white p-2 rounded-lg">
+              <Package size={24} />
             </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setActiveTab('inventory')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'inventory' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+            <h1 className="text-xl font-bold tracking-tight">CaseFactory</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+              <Link 
+                to="/inventory"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${isInventory ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'}`}
               >
                 Inventario
-              </button>
-              <button 
-                onClick={() => setActiveTab('sales')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'sales' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              </Link>
+              <Link 
+                to="/sales"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${!isInventory ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'}`}
               >
                 Ventas
+              </Link>
+            </div>
+            
+            <div className="border-l pl-4 ml-2 flex items-center gap-3">
+              <span className="text-xs text-gray-500 hidden md:inline">{user?.email}</span>
+              <button 
+                onClick={signOut}
+                className="text-gray-400 hover:text-red-600 transition"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={20} />
               </button>
             </div>
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        {/* Main Content */}
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          {activeTab === 'inventory' ? <InventoryView /> : <SalesView />}
-        </main>
-      </div>
-    </StoreProvider>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/" element={<InventoryView />} />
+          <Route path="/inventory" element={<InventoryView />} />
+          <Route path="/sales" element={<SalesView />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <StoreProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </StoreProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
